@@ -1,0 +1,66 @@
+{
+  "$schema": "./setting_schema.json",
+  "input": "./input1.txt",
+  "actions": [
+    {
+      "kind": "send",
+      "port": 1,
+      "src_ip": "192.168.1.100",
+      "src_port": 5000,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 6000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 64,
+      "$comment": "Send a packet from port 1 to port 2"
+    },
+    {
+      "kind": "expect",
+      "port": 2,
+      "src_ip": "192.168.1.100",
+      "src_port": 5000,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 6000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 63,
+      "$comment": "Expect to receive the packet at port 2, with TTL-1"
+    },
+    {
+      "kind": "check",
+      "delay": 0.5,
+      "$comment": "Sleep for 0.5s and check if the packet is there"
+    },
+    {
+      "kind": "send",
+      "port": 1,
+      "src_ip": "192.168.1.100",
+      "src_port": 5000,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 6000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 64,
+      "ip_options_b64": "AQEAAA==",
+      "$comment": "Send a packet from port 1 to port 2 with IP option NOP, NOP."
+    },
+    {
+      "kind": "expect",
+      "port": 2,
+      "src_ip": "192.168.1.100",
+      "src_port": 5000,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 6000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 63,
+      "ip_options_b64": "AQEAAA==",
+      "$comment": "Expect to receive the packet at port 2, with TTL-1"
+    },
+    {
+      "kind": "check",
+      "delay": 0.5,
+      "$comment": "Sleep for 0.5s and check if the packet is there"
+    }
+  ]
+}

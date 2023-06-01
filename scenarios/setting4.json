@@ -1,0 +1,40 @@
+{
+  "$schema": "./setting_schema.json",
+  "input": "./input2.txt",
+  "actions": [
+    {
+      "kind": "send",
+      "port": 1,
+      "src_ip": "192.168.1.100",
+      "src_port": 5000,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 6000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 64,
+      "ip_checksum": 1,
+      "$comment": "Drop packet with wrong IP checksum"
+    },
+    {
+      "kind": "check",
+      "delay": 0.5
+    },
+    {
+      "kind": "send",
+      "port": 1,
+      "src_ip": "192.168.1.100",
+      "src_port": 5000,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 6000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 64,
+      "trans_checksum": 1,
+      "$comment": "Drop packet with wrong UDP checksum"
+    },
+    {
+      "kind": "check",
+      "delay": 0.5
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+{
+  "$schema": "./setting_schema.json",
+  "input": "./input2.txt",
+  "actions": [
+    {
+      "kind": "send",
+      "port": 0,
+      "src_ip": "10.0.0.10",
+      "src_port": 50000,
+      "dst_ip": "98.149.235.132",
+      "dst_port": 49152,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 20,
+      "$comment": "Dropped, because there is no port associated with 49152"
+    },
+    {
+      "kind": "check",
+      "delay": 0.5
+    },
+    {
+      "kind": "send",
+      "port": 1,
+      "src_ip": "192.168.1.100",
+      "src_port": 10000,
+      "dst_ip": "10.0.0.10",
+      "dst_port": 50000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 64,
+      "$comment": "Associate (192.168.1.100, 10000) with 49152"
+    },
+    {
+      "kind": "expect",
+      "port": 0,
+      "src_ip": "98.149.235.132",
+      "src_port": 49152,
+      "dst_ip": "10.0.0.10",
+      "dst_port": 50000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 63
+    },
+    {
+      "kind": "check",
+      "delay": 0.5
+    },
+    {
+      "kind": "send",
+      "port": 0,
+      "src_ip": "10.0.0.10",
+      "src_port": 50000,
+      "dst_ip": "98.149.235.132",
+      "dst_port": 49152,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 20,
+      "$comment": "After the LAN host sends the packet first, the WAN side now can reach the LAN side"
+    },
+    {
+      "kind": "expect",
+      "port": 1,
+      "src_ip": "10.0.0.10",
+      "src_port": 50000,
+      "dst_ip": "192.168.1.100",
+      "dst_port": 10000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 19
+    },
+    {
+      "kind": "send",
+      "port": 0,
+      "src_ip": "10.0.0.10",
+      "src_port": 50001,
+      "dst_ip": "98.149.235.132",
+      "dst_port": 49152,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 20,
+      "$comment": "In our problem setting, (192.168.1.100, 10000) <-> 49152 is nor related to the WAN port"
+    },
+    {
+      "kind": "expect",
+      "port": 1,
+      "src_ip": "10.0.0.10",
+      "src_port": 50001,
+      "dst_ip": "192.168.1.100",
+      "dst_port": 10000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 19
+    },
+    {
+      "kind": "check",
+      "delay": 0.5
+    },
+    {
+      "kind": "send",
+      "port": 2,
+      "src_ip": "192.168.1.200",
+      "src_port": 10000,
+      "dst_ip": "10.0.0.10",
+      "dst_port": 50001,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 64,
+      "$comment": "Associate (192.168.1.200, 10000) <-> 49153"
+    },
+    {
+      "kind": "expect",
+      "port": 0,
+      "src_ip": "98.149.235.132",
+      "src_port": 49153,
+      "dst_ip": "10.0.0.10",
+      "dst_port": 50001,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 63
+    },
+    {
+      "kind": "send",
+      "port": 0,
+      "src_ip": "10.0.0.10",
+      "src_port": 50002,
+      "dst_ip": "98.149.235.132",
+      "dst_port": 49153,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 20
+    },
+    {
+      "kind": "expect",
+      "port": 2,
+      "src_ip": "10.0.0.10",
+      "src_port": 50002,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 10000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 19
+    },
+    {
+      "kind": "check",
+      "delay": 0.5
+    }
+  ]
+}

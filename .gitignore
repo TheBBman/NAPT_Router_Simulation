@@ -1,0 +1,11 @@
+.idea
+.vscode
+
+*.o
+*.dSYM
+stdout.txt
+stderr.txt
+__pycache__
+
+/project/server
+/project/client

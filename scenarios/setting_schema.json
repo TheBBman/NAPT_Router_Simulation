@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/CS118S23/spring23-project2/main/scenarios/setting_schema.json",
+  "title": "Setting",
+  "description": "A test case setting for CS 118 Project 2",
+  "type": "object",
+  "properties": {
+    "actions": {
+      "description": "Actions to be done in this test case",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "description": "Kind of action to be done. Can be send, expect, or check",
+            "type": "string",
+            "enum": [
+              "send",
+              "expect",
+              "check"
+            ]
+          },
+          "port": {
+            "description": "The ID of port to execute this action. 0 is the WAN port.",
+            "type": "integer"
+          },
+          "src_ip": {
+            "description": "The source IP address of the packet",
+            "type": "string"
+          },
+          "dst_ip": {
+            "description": "The destination IP address of the packet",
+            "type": "string"
+          },
+          "src_port": {
+            "description": "The source port number of the packet",
+            "type": "integer"
+          },
+          "dst_port": {
+            "description": "The destination port number of the packet",
+            "type": "integer"
+          },
+          "proto": {
+            "description": "Transport layer protocol of the packet. Can be tcp or udp",
+            "type": "string",
+            "enum": [
+              "tcp",
+              "udp"
+            ]
+          },
+          "payload": {
+            "description": "The payload of the packet. UTF-8 string",
+            "type": "string"
+          },
+          "ttl": {
+            "description": "The hop count of the IP header",
+            "type": "integer"
+          },
+          "seq": {
+            "description": "The TCP sequence number",
+            "type": "integer"
+          },
+          "ack": {
+            "description": "The TCP acknowledge number",
+            "type": "integer"
+          },
+          "flag": {
+            "description": "The TCP flag number",
+            "type": "integer"
+          },
+          "rwnd": {
+            "description": "The TCP window",
+            "type": "integer"
+          },
+          "ip_options_b64": {
+            "description": "The IP options field encoded in base64",
+            "type": "string"
+          },
+          "ip_checksum": {
+            "description": "The checksum for an IP packet. Automatically computed if this field does not occur",
+            "type": "integer"
+          },
+          "trans_checksum": {
+            "description": "The checksum in the TCP/UDP header. Automatically computed if this field does not occur",
+            "type": "integer"
+          },
+          "delay": {
+            "description": "The time to wait in seconds before we check if all expected packets are received",
+            "type": "number"
+          },
+          "$comment": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "send"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "port",
+                "src_ip",
+                "dst_ip",
+                "src_port",
+                "dst_port",
+                "proto",
+                "payload",
+                "ttl"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "expect"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "port",
+                "src_ip",
+                "dst_ip",
+                "src_port",
+                "dst_port",
+                "proto",
+                "payload",
+                "ttl"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "check"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "delay"
+              ]
+            }
+          }
+        ]
+      },
+      "minItems": 1
+    },
+    "input": {
+      "description": "The path to the input file to the program",
+      "type": "string"
+    }
+  },
+  "required": [
+    "actions",
+    "input"
+  ]
+}

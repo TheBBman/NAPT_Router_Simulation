@@ -1,0 +1,150 @@
+{
+  "$schema": "./setting_schema.json",
+  "input": "./input3.txt",
+  "actions": [
+    {
+      "kind": "send",
+      "port": 1,
+      "src_ip": "192.168.1.100",
+      "src_port": 5000,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 80,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 64,
+      "$comment": "Denied by ACL 1 (LAN to LAN)"
+    },
+    {
+      "kind": "send",
+      "port": 2,
+      "src_ip": "192.168.1.200",
+      "src_port": 80,
+      "dst_ip": "192.168.1.100",
+      "dst_port": 80,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 64,
+      "$comment": "Denied by ACL 1 & 2 (LAN to LAN)"
+    },
+    {
+      "kind": "send",
+      "port": 2,
+      "src_ip": "192.168.1.200",
+      "src_port": 80,
+      "dst_ip": "192.168.1.100",
+      "dst_port": 5000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 64,
+      "$comment": "Denied by ACL 2 (LAN to LAN)"
+    },
+    {
+      "kind": "send",
+      "port": 1,
+      "src_ip": "192.168.1.100",
+      "src_port": 80,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 5000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 64,
+      "$comment": "Allowed"
+    },
+    {
+      "kind": "expect",
+      "port": 2,
+      "src_ip": "192.168.1.100",
+      "src_port": 80,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 5000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 63
+    },
+    {
+      "kind": "check",
+      "delay": 0.5
+    },
+    {
+      "kind": "send",
+      "port": 1,
+      "src_ip": "192.168.1.100",
+      "src_port": 5000,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 6000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 1,
+      "$comment": "Drop as TTL = 0"
+    },
+    {
+      "kind": "check",
+      "delay": 0.5
+    },
+    {
+      "kind": "send",
+      "port": 0,
+      "src_ip": "10.0.0.10",
+      "src_port": 5000,
+      "dst_ip": "98.149.235.132",
+      "dst_port": 443,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 20,
+      "$comment": "Allowed after rewrite"
+    },
+    {
+      "kind": "expect",
+      "port": 2,
+      "src_ip": "10.0.0.10",
+      "src_port": 5000,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 9000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 19
+    },
+    {
+      "kind": "send",
+      "port": 1,
+      "src_ip": "192.168.1.100",
+      "src_port": 5000,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 443,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 20,
+      "$comment": "Denied by ACL 3 (LAN to LAN)"
+    },
+    {
+      "kind": "check",
+      "delay": 0.5
+    },
+    {
+      "kind": "send",
+      "port": 1,
+      "src_ip": "192.168.1.100",
+      "src_port": 5000,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 9000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 20
+    },
+    {
+      "kind": "expect",
+      "port": 2,
+      "src_ip": "192.168.1.100",
+      "src_port": 5000,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 9000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 19
+    },
+    {
+      "kind": "check",
+      "delay": 0.5
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+version: '3'
+services:
+  node1:
+    build: .
+    command: bash -c "while true; do sleep 10000; done"
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./:/project:rw
+    networks:
+      common-net:
+        ipv4_address: 192.168.10.225
+
+networks:
+  common-net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.10.0/24

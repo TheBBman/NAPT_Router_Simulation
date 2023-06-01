@@ -1,0 +1,130 @@
+{
+  "$schema": "./setting_schema.json",
+  "input": "./input2.txt",
+  "actions": [
+    {
+      "kind": "send",
+      "port": 1,
+      "src_ip": "192.168.1.100",
+      "src_port": 8080,
+      "dst_ip": "10.0.0.10",
+      "dst_port": 50000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 64,
+      "$comment": "Rewrite with static NAPT table (LAN->WAN, IP only)"
+    },
+    {
+      "kind": "expect",
+      "port": 0,
+      "src_ip": "98.149.235.132",
+      "src_port": 8080,
+      "dst_ip": "10.0.0.10",
+      "dst_port": 50000,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 63,
+      "$comment": "Rewrite with static NAPT table (LAN->WAN, IP only)"
+    },
+    {
+      "kind": "check",
+      "delay": 0.5
+    },
+    {
+      "kind": "send",
+      "port": 0,
+      "src_ip": "10.0.0.10",
+      "src_port": 50000,
+      "dst_ip": "98.149.235.132",
+      "dst_port": 8080,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 20,
+      "$comment": "Rewrite with static NAPT table (WAN->LAN, IP only)"
+    },
+    {
+      "kind": "expect",
+      "port": 1,
+      "src_ip": "10.0.0.10",
+      "src_port": 50000,
+      "dst_ip": "192.168.1.100",
+      "dst_port": 8080,
+      "proto": "udp",
+      "payload": "",
+      "ttl": 19,
+      "$comment": "Rewrite with static NAPT table (WAN->LAN, IP only)"
+    },
+    {
+      "kind": "check",
+      "delay": 0.5
+    },
+    {
+      "kind": "send",
+      "port": 0,
+      "src_ip": "10.0.0.10",
+      "src_port": 50000,
+      "dst_ip": "98.149.235.132",
+      "dst_port": 443,
+      "proto": "tcp",
+      "payload": "hello",
+      "flag": 16,
+      "seq": 1234,
+      "ack": 5678,
+      "ttl": 20,
+      "$comment": "Rewrite with static NAPT table (WAN->LAN)"
+    },
+    {
+      "kind": "expect",
+      "port": 2,
+      "src_ip": "10.0.0.10",
+      "src_port": 50000,
+      "dst_ip": "192.168.1.200",
+      "dst_port": 9000,
+      "proto": "tcp",
+      "payload": "hello",
+      "flag": 16,
+      "seq": 1234,
+      "ack": 5678,
+      "ttl": 19,
+      "$comment": "Rewrite with static NAPT table (WAN->LAN)"
+    },
+    {
+      "kind": "check",
+      "delay": 0.5
+    },
+    {
+      "kind": "send",
+      "port": 2,
+      "src_ip": "192.168.1.200",
+      "src_port": 9000,
+      "dst_ip": "10.0.0.10",
+      "dst_port": 50000,
+      "proto": "tcp",
+      "payload": "world",
+      "flag": 16,
+      "seq": 5678,
+      "ack": 1239,
+      "ttl": 64,
+      "$comment": "Rewrite with static NAPT table (LAN->WAN)"
+    },
+    {
+      "kind": "expect",
+      "port": 0,
+      "src_ip": "98.149.235.132",
+      "src_port": 443,
+      "dst_ip": "10.0.0.10",
+      "dst_port": 50000,
+      "proto": "tcp",
+      "payload": "world",
+      "flag": 16,
+      "seq": 5678,
+      "ack": 1239,
+      "ttl": 63,
+      "$comment": "Rewrite with static NAPT table (LAN->WAN)"
+    },
+    {
+      "kind": "check",
+      "delay": 0.5
+    }
+  ]
+}
