@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+# include "functions.cpp"
 
 int main() {
   std::string szLine;
@@ -12,7 +13,7 @@ int main() {
 
   std::cout << "Server's LAN IP: " << szLanIp << std::endl
             << "Server's WAN IP: " << szWanIp << std::endl;
-
+  test_func();
   // TODO: Modify/Add/Delete files under the project folder.
 
   return 0;
