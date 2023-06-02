@@ -13,6 +13,21 @@
 
 #define DEFAULT_PORT 5152
 
+#pragma pack(1)
+struct IP_packet{
+    uint4_t version;
+    uint4_t header_length;
+    uint16_t stuff;
+    uint32_t more_stuff;
+    uint64_t more_stuff2;
+    uint8_t TTL;
+    uint8_t protocol;
+    uint16_t ip_checksum;
+    uint32_t source_ip;
+    uint32_t dest_ip;
+}
+#pragma pack()
+
 int main() {
     std::string szLine;
 
@@ -30,10 +45,13 @@ int main() {
     //--------------------------------------------------------------------------------------//
     // Client connection Setup:
 
-    // Get client_nums from config input
-    int client_nums = 0;
+    // Store IP address | port to socket pairings
+    std::map<std::string, int> map;
 
-    int listening_socket, client_sockets[client_nums];
+    // Get num_clients from config input
+    int num_clients, max_sd = 0;
+    int listening_socket, client_sockets[num_clients];
+    char buffer[1024];
 
     listening_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (listening_socket == 0) {
@@ -62,7 +80,7 @@ int main() {
     int connected_clients = 0;
 
     // Keep accepting connections until all clients are connected
-    while(connected_clients < client_nums) {
+    while(connected_clients < num_clients) {
         new_socket = accept(listening_socket, (struct sockaddr)*&address, (socklen_t *)&addrlen);
 
         if (new_socket < 0) {
@@ -81,6 +99,43 @@ int main() {
 
     // Client connection setup end
     //--------------------------------------------------------------------------------------//
+    // Poll connections with select() 
+
+    while (1) {
+        // Zero out fd set and then add all connections into it
+        FD_ZERO(&readfds);
+        for(int i = 0; i < num_clients; i++) {
+            int sd = client_sockets[i];
+            FD_SET(sd, &readfds);
+            if (sd > max_sd) {
+                max_sd = sd
+            }
+        }
+
+        // Only select sockets with something to read
+        activity = select(max_sd + 1, &readfds, NULL, NULL, NULL)
+        if ((activity < 0) && (errno != EINTR)) {
+            perror("select");
+        }
+
+        for (int i = 0; i < num_clients; i++) {
+            int sd = client_sockets[i];
+
+            if (FD_ISSET(sd, &readfds)) {
+                // Receive IP packet from client if there is data
+                valread = read(sd, buffer, BUFFER_SIZE);
+                buffer[valread] = '\0';
+
+                if (valread == 0) {
+                    close(sd);
+                    client_sockets[i] = 0;
+                } else {
+                    // Process the packet
+                }
+            }
+        }
+    }
+
 
     return 0;
 }
