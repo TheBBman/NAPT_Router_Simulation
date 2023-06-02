@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 # include "functions.cpp"
-
+using namespace std;
 int main() {
   std::string szLine;
 
@@ -13,8 +13,8 @@ int main() {
 
   std::cout << "Server's LAN IP: " << szLanIp << std::endl
             << "Server's WAN IP: " << szWanIp << std::endl;
-  test_func();
   // TODO: Modify/Add/Delete files under the project folder.
-
+  std::string test_header = "0100010111111111000000000001010000000000000000000000000000000000111111110000011011111111111111110000000000000000000000000000000011111111111111111111111111111111";
+  std::cout <<test_header<<std::endl;
   return 0;
 }
