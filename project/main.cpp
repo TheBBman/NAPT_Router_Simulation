@@ -97,8 +97,9 @@ int main() {
     // Store IP address | port to socket pairings
     std::unordered_map<std::string, int> connection_map;
 
-    // Socket to get connections and list of client sockets
-    int listening_socket, client_sockets[num_clients];
+    // Socket to get connections and list of all sockets, client + WAN
+    int num_sockets = num_clients + 1;
+    int listening_socket, client_sockets[num_sockets];
     fd_set readfds;
 
     listening_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -127,7 +128,7 @@ int main() {
     int connection_num = 0;
 
     // Keep accepting connections until all clients are connected
-    while(connection_num < num_clients) {
+    while(connection_num < num_sockets) {
         int new_socket = accept(listening_socket, NULL, NULL);
 
         if (new_socket < 0) {
@@ -135,8 +136,10 @@ int main() {
                 exit(EXIT_FAILURE);
         }
 
-        // Add ip to socket mapping
-        connection_map[client_ips[connection_num]] = new_socket;
+        // Add ip to socket mapping, skip over first socket which is WAN
+        if (connection_num > 0) {
+            connection_map[client_ips[connection_num-1]] = new_socket;
+        }
 
         // Go through socket array and fill in the next empty spot with new socket
         client_sockets[connection_num] = new_socket;
@@ -152,16 +155,16 @@ int main() {
 
     // Single ip packet maximum size, to be reused for processing
     // Will only ever hold at most one ip packet
-    char buffer[num_clients][65535];
+    char buffer[num_sockets][65535];
 
     // Used to keep track of partial ip packets ^_^
-    int fragment[num_clients] = {0};
-    int bytes_fragmented[num_clients];
+    int fragment[num_sockets] = {0};
+    int bytes_fragmented[num_sockets];
 
     while (1) {
         // Zero out fd set and then add all connections into it
         FD_ZERO(&readfds);
-        for(int i = 0; i < num_clients; i++) {
+        for(int i = 0; i < num_sockets; i++) {
             int sd = client_sockets[i];
             FD_SET(sd, &readfds);
             if (sd > max_sd) {
@@ -176,7 +179,7 @@ int main() {
         }
 
         // Loop through all client sockets
-        for (int i = 0; i < num_clients; i++) {
+        for (int i = 0; i < num_sockets; i++) {
             int sd = client_sockets[i];
 
             // If socket was NOT selected, skip
@@ -188,14 +191,14 @@ int main() {
             //--------------------------------------------------------------------------------------//
             // Extract single, valid ip packet
 
-            // How many bytes into available stream has been read
+            // How many bytes into available socket stream has been read
             int sd_read_head = 0;
 
             //-----------------------------------------------------------------//
             // Fragmentation cases, will only happen once per select() so just hard code
 
             // Fragmented header 
-            if (fragment[i] == 1) {
+            if (fragment[i] == 1) {    
                 int bytes = bytes_fragmented[i];
 
                 // Read in next ip packet header
@@ -204,7 +207,6 @@ int main() {
 
                 // This means ip header fragmented, AGAIN
                 if (bytes_read < 20) {
-                    fragment[i] = 1;
                     bytes_fragmented[i] = 20 - bytes - bytes_read;
                     continue;
                 }
@@ -229,19 +231,19 @@ int main() {
 
                 // Reset buffer back to known state
                 memset(buffer[i], 0, 65535);
+                fragment[i] = 0;
             }
             // Fragmented payload 
-            if (fragment[i] == 2) {
+            else if (fragment[i] == 2) {
                 const struct IP_header* ip = (const struct IP_header*)buffer[i];
                 uint16_t payload_length = ntohs(ip->total_length) - 20;
 
-                int head_position = payload_length - bytes_fragmented[i];
+                int buf_position = payload_length + 20 - bytes_fragmented[i];
                 
-                int bytes_read = read(sd, buffer[i] + head_position, bytes_fragmented[i]);
+                int bytes_read = read(sd, buffer[i] + buf_position, bytes_fragmented[i]);
                 
                 // This means ip payload fragmented, again
                 if (bytes_read < payload_length) {
-                    fragment[i] = 2;
                     bytes_fragmented[i] = payload_length - bytes_read;
                     continue;
                 }
@@ -254,6 +256,7 @@ int main() {
 
                 // Reset buffer back to known state
                 memset(buffer[i], 0, 65535);
+                fragment[i] = 0;
             }
 
             //-----------------------------------------------------------------//
@@ -264,9 +267,9 @@ int main() {
                 int bytes_read = read(sd, buffer[i] + sd_read_head, 20);
                 sd_read_head += bytes_read;
 
-                // This probably means test is over, wait for SIGKILL
+                // This means test is over or all packets read
                 if (bytes_read == 0) {
-                    break;;
+                    break;
                 }
                 // This means ip header fragmented 
                 else if (bytes_read < 20) {
@@ -291,7 +294,19 @@ int main() {
 
                 // Now buffer should contain a full ip packet
 
-                // ---> Randy doing his magic <--- //
+                // ---> Randy doing his magic, process IP packet <--- //
+
+                // What to return:
+
+                // Drop or forward? If drop, just skip the following forwarding section
+                // For forwarding section:
+                // Any modifications? Recomputing checksum?
+                // If source is from outside, search in ext_NAT_table. If not found, drop
+                // Obtain destination ip. If in connection_map, local. If not found, send to WAN
+                // Static or Dynamic NAPT? if doing dynamic NAPT, add pairing to both NAPT maps
+                // Write to specified socket
+
+                // Remember to copy and paste this code to the two fragmentation cases at the end too
 
                 // Reset buffer back to known state
                 memset(buffer[i], 0, 65535);
