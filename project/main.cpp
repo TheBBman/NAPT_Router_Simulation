@@ -233,7 +233,6 @@ int main() {
                 // Now buffer should contain a full ip packet
 
                 // ---> Randy doing his magic <--- //
-
                 // Reset buffer back to known state
                 memset(buffer[i], 0, 65535);
                 fragment[i] = 0;
@@ -376,7 +375,7 @@ int test(){
         std::string ext_pair = router_WanIp + " " + wan_port;
 
         int_NAT_table[int_pair] = ext_pair;
-        ext_NAT_table[int_pair] = ext_pair;
+        ext_NAT_table[ext_pair] = int_pair;
     } 
 
     string header_length = "0101";
@@ -384,7 +383,7 @@ int test(){
     string stuff = "11111111";
     string total_length = "0000000000011100";
     string more_stuff2 = "11111111111111111111111111111111";
-    string TTL = "00000001";
+    string TTL = "00000010";
     string protocol = "00010001";
     string ip_checksum = "0000000000000000";
     string source_ip = "01100100000000011010100011000000";
@@ -406,7 +405,7 @@ int test(){
     const struct IP_header* test_ip =  (const struct IP_header*)buffer;
     uint16_t real_checksum_int = compute_IP_checksum_value(test_ip);
     cout<<"should be "<<real_checksum_int<<endl;
-    string real_checksum = "0100111100101100";
+    string real_checksum = "0100111100101011";
     string real_packet = header_length+version+ stuff+ total_length + more_stuff2+TTL+ protocol + real_checksum + source_ip+dest_ip+source_port+dest_port+useless+udp_checksum;
     const char* test_header2 = real_packet.c_str();
     char* buffer2 = (char*) malloc(len);
@@ -427,10 +426,10 @@ int test(){
     processIPPacket(buffer2, len, source_string, dest_string, int_NAT_table, ext_NAT_table, router_LanIp, router_WanIp, cur_unused_port);
     cout<<"final source IP and port: "<<source_string<<endl;
     cout<<"final destination IP and port: "<<dest_string<<endl;
-    //const struct IP_header* modified_ip = (const struct IP_header*)buffer2;
-    //cout<<ntohl(modified_ip->source_ip)<<" "<<ntohs(modified_ip->ip_checksum)<<endl;
-    //const struct UDP_header* modified_udp = (const struct UDP_header*)(buffer2 + (modified_ip->header_length*4));
-    //cout<<ntohs(modified_udp->source_port)<<" "<<ntohs(modified_udp->UDP_checksum)<<endl;
+    const struct IP_header* modified_ip = (const struct IP_header*)buffer2;
+    cout<<ntohl(modified_ip->dest_ip)<<" "<<ntohs(modified_ip->ip_checksum)<<" "<<unsigned(modified_ip->TTL)<<endl;
+    const struct UDP_header* modified_udp = (const struct UDP_header*)(buffer2 + (modified_ip->header_length*4));
+    cout<<ntohs(modified_udp->dest_port)<<" "<<ntohs(modified_udp->UDP_checksum)<<endl;
     free(buffer);
     free(buffer2);
     return 0;

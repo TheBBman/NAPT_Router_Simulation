@@ -192,6 +192,7 @@ int processIPPacket(char* buffer, size_t length, string& final_source_ip_and_por
     uint16_t total_length = ntohs(ip->total_length);
     uint8_t protocol = ip->protocol;
     uint16_t ip_checksum = ntohs(ip->ip_checksum);
+    uint8_t TTL = ip->TTL;
     struct in_addr source_ip;
     struct in_addr dest_ip;
     source_ip.s_addr = ntohl(ip->source_ip);
@@ -202,13 +203,13 @@ int processIPPacket(char* buffer, size_t length, string& final_source_ip_and_por
     strncpy(dest_ip_str, inet_ntoa(dest_ip), INET_ADDRSTRLEN);
 
     //test if its right:
-    printf("IP packet: version = %u, header_length = %u, total_length = %u, protocol = %u, ip_checksum = %u, source_ip=%u, dest_ip =%u\n",
-           version, header_length, total_length, protocol, ip_checksum, source_ip.s_addr, dest_ip.s_addr);
+    printf("IP packet: version = %u, header_length = %u, total_length = %u, protocol = %u, ip_checksum = %u, TTL= %u, source_ip=%u, dest_ip =%u\n",
+           version, header_length, total_length, protocol, ip_checksum, TTL, source_ip.s_addr, dest_ip.s_addr);
     printf("source_ip = %s, dest_ip = %s\n", source_ip_str, dest_ip_str);
 
-    //check IP TTL, drop of TTL=0
-    if (ip->TTL == 0){
-        printf("packet dropped due to to TTL=0");
+    //check IP TTL, drop if TTL=0 or 1
+    if (TTL <= 1){
+        printf("packet dropped due to to TTL=0 or 1\n");
         return -1;
     }
 
@@ -277,14 +278,14 @@ int processIPPacket(char* buffer, size_t length, string& final_source_ip_and_por
     //got the addresses and ports, now we modify the packets based on the three cases
 
 
-    //string source_ip_string (source_ip_str);
-    //string dest_ip_string (dest_ip_str);
-    string source_ip_string = "192.168.1.200";
-    string dest_ip_string = "10.05.05.01";
-    //string source_port_string = to_string(source_port);
-    //string dest_port_string = to_string(dest_port);
-    string source_port_string = "9000";
-    string dest_port_string = "1000";
+    string source_ip_string (source_ip_str);
+    string dest_ip_string (dest_ip_str);
+    //string source_ip_string = "10.05.05.01";
+    //string dest_ip_string = "98.149.235.132";
+    string source_port_string = to_string(source_port);
+    string dest_port_string = to_string(dest_port);
+    //string source_port_string = "1000";
+    //string dest_port_string = "443";
 
 
     string LAN_PREFIX = extractPrefix(router_LanIp);
@@ -294,10 +295,18 @@ int processIPPacket(char* buffer, size_t length, string& final_source_ip_and_por
     bool dest_is_lan = dest_ip_string.substr(0, LAN_PREFIX.length()) == LAN_PREFIX;
     //local forwarding
     if (source_is_lan && dest_is_lan) {
-        cout<<"this is local LAN forwarding, no modification needed"<<endl;
+        cout<<"this is local LAN forwarding, TTL needs to be decremented"<<endl;
         final_dest_ip_and_port = dest_ip_string + " " +dest_port_string;
         final_source_ip_and_port = source_ip_string +" "+source_port_string;
-        return 1;
+
+        //decrement TTL
+        struct IP_header* modify_ip = (struct IP_header*)buffer;
+        uint8_t new_TTL = TTL-1;
+        modify_ip->TTL = new_TTL;
+        uint16_t modified_ip_checksum = compute_IP_checksum_value(modify_ip);
+        modify_ip->ip_checksum = htons(modified_ip_checksum);
+        cout<<"new ip is "<<ntohl(modify_ip->source_ip)<<" new checksum is "<<ntohs(modify_ip->ip_checksum)<<endl;
+        return 0;
     }
     string original_source_str = source_ip_string +" "+source_port_string;
     string original_dest_str = dest_ip_string + " " +dest_port_string;
@@ -317,11 +326,14 @@ int processIPPacket(char* buffer, size_t length, string& final_source_ip_and_por
             string cur_unused_port_string = to_string(cur_unused_port);
             modified_str = router_WanIp +" "+cur_unused_port_string;
             int_NAT_table.insert({original_source_str, modified_str});
+            //add for ext NAT table as well
+            ext_NAT_table.insert({modified_str,original_source_str});
             cur_unused_port += 1;
 
             //check if successful
             auto check = int_NAT_table.find(original_source_str);
-            cout<<"new mapping created "<< check->second<<endl;
+            auto check2 = ext_NAT_table.find(modified_str);
+            cout<<"new mapping created "<< check->second<<" "<<check2->second <<endl;
             
             //get the new IP and ports
         } else {
@@ -337,6 +349,8 @@ int processIPPacket(char* buffer, size_t length, string& final_source_ip_and_por
         modified_source_port = modified_ip_and_port.second;
         struct IP_header* modify_ip = (struct IP_header*)buffer;
         modify_ip->source_ip = htonl(modified_source_ip);
+        uint8_t new_TTL = TTL-1;
+        modify_ip->TTL = new_TTL;
         uint16_t modified_ip_checksum = compute_IP_checksum_value(modify_ip);
         modify_ip->ip_checksum = htons(modified_ip_checksum);
         cout<<"new ip is "<<ntohl(modify_ip->source_ip)<<" new checksum is "<<ntohs(modify_ip->ip_checksum)<<endl;
@@ -365,16 +379,68 @@ int processIPPacket(char* buffer, size_t length, string& final_source_ip_and_por
         }
 
         cout<<"finished modifying packet"<<endl;
-        return 2;
+        return 1;
     }
 
     //external to internal (both addresses are not local), use ext_NAT_table
     if (!source_is_lan){
         cout<<"this is external to internal forwarding, modificaion needed for destination"<<endl;
+        //check if already in table
+        auto it = ext_NAT_table.find(original_dest_str); 
+        //if the mapping doesn't exist, create one
+        string modified_str ="";
+        if (it == ext_NAT_table.end()) {
+            cout<<"entry does not exist yet, dropping"<<endl;
+            return -1;            
+        } else {
+        // mapping exists, directly retrieve new address
+            modified_str = it->second;
+            cout<<"retrieved new port "<<modified_str<<endl;
+        } 
+        final_dest_ip_and_port = modified_str;
+        final_source_ip_and_port = source_ip_string + " " +source_port_string;
+        //TODO: modify actual IP packet and TCP header (IP source, TCP source, IP checksum, TCP checksum)
+        pair<uint32_t, uint16_t> modified_ip_and_port = parseIPAndPort(modified_str);
+        modified_dest_ip = modified_ip_and_port.first;
+        modified_dest_port = modified_ip_and_port.second;
+
+        struct IP_header* modify_ip = (struct IP_header*)buffer;
+        modify_ip->dest_ip = htonl(modified_dest_ip);
+        uint8_t new_TTL = TTL-1;
+        modify_ip->TTL = new_TTL;
+        uint16_t modified_ip_checksum = compute_IP_checksum_value(modify_ip);
+        modify_ip->ip_checksum = htons(modified_ip_checksum);
+        cout<<"new ip is "<<ntohl(modify_ip->dest_ip)<<" new checksum is "<<ntohs(modify_ip->ip_checksum)<<endl;
+        if (protocol == 17){
+            //modify udp header
+            struct UDP_header* modify_udp = (struct UDP_header*)(buffer+header_len_bytes);
+            modify_udp->dest_port = htons(modified_dest_port);
+            uint16_t transport_header_length = sizeof(struct UDP_header);
+            uint16_t actual_payload_length = payload_length - transport_header_length;
+            uint16_t modified_udp_checksum = compute_UDP_checksum(modify_ip,modify_udp, buffer + header_len_bytes + transport_header_length, actual_payload_length);
+            modify_udp->UDP_checksum = htons(modified_udp_checksum);
+
+        }
+        else if(protocol ==6){
+            //modify tcp header
+            struct TCP_header* modify_tcp = (struct TCP_header*)(buffer+header_len_bytes);
+            modify_tcp->dest_port = htons(modified_dest_port);
+            uint16_t transport_header_length = sizeof(struct TCP_header);
+            uint16_t actual_payload_length = payload_length - transport_header_length;
+            uint16_t modified_tcp_checksum = compute_TCP_checksum(modify_ip,modify_tcp, buffer + header_len_bytes + transport_header_length, actual_payload_length);
+            modify_tcp->TCP_checksum = htons(modified_tcp_checksum);
+        }
+        else{
+            perror("somethin is very wrong");
+            return -1;
+        }
+
+        cout<<"finished modifying packet"<<endl;
+        return 0;
     }
-
-
-    final_dest_ip_and_port = "yomama";
+    perror("some thing wrong");
+    cout<<"uh oh"<<endl;
+    return -2;
 }
 
 void binaryStringToBytes(const char *binary, char *buffer, size_t len) {
