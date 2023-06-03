@@ -196,14 +196,14 @@ int main() {
 
             // Fragmented header 
             if (fragment[i] == 1) {
-                int bytes = bytes_to_read[i];
+                int bytes = bytes_fragmented[i];
 
                 // Read in next ip packet header
                 int bytes_read = read(sd, buffer[i] + 20 - bytes, bytes);
                 sd_read_head += bytes_read;
 
                 // This means ip header fragmented, AGAIN
-                else if (bytes_read < 20) {
+                if (bytes_read < 20) {
                     fragment[i] = 1;
                     bytes_fragmented[i] = 20 - bytes - bytes_read;
                     continue;
@@ -231,13 +231,13 @@ int main() {
                 memset(buffer[i], 0, 65535);
             }
             // Fragmented payload 
-            else if (fragment[i] == 2) {
+            if (fragment[i] == 2) {
                 const struct IP_header* ip = (const struct IP_header*)buffer[i];
                 uint16_t payload_length = ntohs(ip->total_length) - 20;
 
-                int head_position = payload_length - bytes_to_read[i]
+                int head_position = payload_length - bytes_fragmented[i];
                 
-                int bytes_read = read(sd, buffer[i] + head_position, bytes_to_read[i]);
+                int bytes_read = read(sd, buffer[i] + head_position, bytes_fragmented[i]);
                 
                 // This means ip payload fragmented, again
                 if (bytes_read < payload_length) {
