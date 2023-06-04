@@ -311,74 +311,58 @@ int main() {
             //-----------------------------------------------------------------//
             
             // Could be multiple packets in stream
-            while(1) {
-                // Read in next ip packet header
-                int bytes_read = read(sd, buffer[i], 20);
+            // Read in next ip packet header
+            int bytes_read = read(sd, buffer[i], 20);
 
-                // This means nothing more to read
-                if (bytes_read == 0) {
-                    break;
-                }
+            // Find total length of ip packet
+            const struct IP_header* ip = (const struct IP_header*)buffer[i];
+            uint16_t payload_length = ntohs(ip->total_length) - 20;
+            
+            bytes_read = read(sd, buffer[i] + 20, payload_length);
 
-                // This means ip header fragmented 
-                if (bytes_read < 20) {
-                    std::cout << "fragment case 1" << std::endl;
-                    //fragment[i] = 1;
-                    //bytes_fragmented[i] = 20 - bytes_read;
-                    break;
-                }
-                // Normal logic
+            // This means ip payload fragmented
+            if (bytes_read < payload_length) {
+                std::cout << "fragment case 2" << std::endl;
+                //fragment[i] = 2;
+                //bytes_fragmented[i] = payload_length - bytes_read;
+                break;
+            }
 
-                // Find total length of ip packet
-                const struct IP_header* ip = (const struct IP_header*)buffer[i];
-                uint16_t payload_length = ntohs(ip->total_length) - 20;
-                
-                bytes_read = read(sd, buffer[i] + 20, payload_length);
+            // Now buffer should contain a full ip packet
 
-                // This means ip payload fragmented
-                if (bytes_read < payload_length) {
-                    std::cout << "fragment case 2" << std::endl;
-                    //fragment[i] = 2;
-                    //bytes_fragmented[i] = payload_length - bytes_read;
-                    break;
-                }
+            // ---> Randy doing his magic, process IP packet <--- //
 
-                // Now buffer should contain a full ip packet
+            // What to return:
 
-                // ---> Randy doing his magic, process IP packet <--- //
+            // Drop or forward? If drop, just skip the following forwarding section
+            // For forwarding section:
+            // Any modifications? Recomputing checksum?
+            // If source is from outside, search in ext_NAT_table. If not found, drop
+            // Obtain destination ip. If in connection_map, local. If not found, send to WAN
+            // Static or Dynamic NAPT? if doing dynamic NAPT, add pairing to both NAPT maps
+            // Write to specified socket
 
-                // What to return:
+            std::string final_source_ip_port;
+            std::string final_dest_ip_port;
+            int result = processIPPacket(buffer[i], 0, final_source_ip_port, final_dest_ip_port, int_NAT_table, ext_NAT_table, router_LanIp, router_WanIp, dynamic_port);
+            if (result < 0) {
+                // Drop the packet
+                std::cout << "packet dropped" << std::endl;
+                continue;
+            }
 
-                // Drop or forward? If drop, just skip the following forwarding section
-                // For forwarding section:
-                // Any modifications? Recomputing checksum?
-                // If source is from outside, search in ext_NAT_table. If not found, drop
-                // Obtain destination ip. If in connection_map, local. If not found, send to WAN
-                // Static or Dynamic NAPT? if doing dynamic NAPT, add pairing to both NAPT maps
-                // Write to specified socket
+            size_t pos = final_dest_ip_port.find(' ');
+            std::string final_dest_ip = final_dest_ip_port.substr(0, pos);
 
-                std::string final_source_ip_port;
-                std::string final_dest_ip_port;
-                int result = processIPPacket(buffer[i], 0, final_source_ip_port, final_dest_ip_port, int_NAT_table, ext_NAT_table, router_LanIp, router_WanIp, dynamic_port);
-                if (result < 0) {
-                    // Drop the packet
-                    std::cout << "packet dropped" << std::endl;
-                    continue;
-                }
-
-                size_t pos = final_dest_ip_port.find(' ');
-                std::string final_dest_ip = final_dest_ip_port.substr(0, pos);
-
-                int dest_socket;
-                auto it = connection_map.find(final_dest_ip);
-                if (it == connection_map.end()) {
-                    dest_socket = client_sockets[0];
-                } else {
-                    dest_socket = it->second;
-                }
-                write(dest_socket, buffer[i], payload_length + 20);
-                // Remember to copy and paste this code to the two fragmentation cases at the end too
-            }   
+            int dest_socket;
+            auto it = connection_map.find(final_dest_ip);
+            if (it == connection_map.end()) {
+                dest_socket = client_sockets[0];
+            } else {
+                dest_socket = it->second;
+            }
+            write(dest_socket, buffer[i], payload_length + 20);
+            // Remember to copy and paste this code to the two fragmentation cases at the end too
         }
     }
 }
