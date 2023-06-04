@@ -309,9 +309,7 @@ int main() {
             */
 
             //-----------------------------------------------------------------//
-            // Debugging
-            int loop_count = 0;
-
+            
             // Could be multiple packets in stream
             while(1) {
                 // Read in next ip packet header
