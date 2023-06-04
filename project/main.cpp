@@ -113,6 +113,9 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
+    int optval = 1;                                         
+    setsockopt(listening_socket, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)); 
+
     struct sockaddr_in address;
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
@@ -190,10 +193,14 @@ int main() {
         for (int i = 0; i < num_sockets; i++) {
             int sd = client_sockets[i];
 
+            std::cout << sd << std::endl;
+
             // If socket was NOT selected, skip
             if (!FD_ISSET(sd, &readfds)) {
                 continue;
             }
+
+            std::cout << "selected" << std::endl;
 
             // end of select()
             //--------------------------------------------------------------------------------------//
@@ -247,7 +254,7 @@ int main() {
                 }
 
                 size_t pos = final_dest_ip_port.find(' ');
-                std::string final_dest_ip = szLine.substr(0, pos);
+                std::string final_dest_ip = final_dest_ip_port.substr(0, pos);
                 int dest_socket = connection_map[final_dest_ip];
                 write(dest_socket, buffer[i], payload_length + 20);
 
@@ -286,7 +293,7 @@ int main() {
                 }
 
                 size_t pos = final_dest_ip_port.find(' ');
-                std::string final_dest_ip = szLine.substr(0, pos);
+                std::string final_dest_ip = final_dest_ip_port.substr(0, pos);
                 int dest_socket = connection_map[final_dest_ip];
                 write(dest_socket, buffer[i], payload_length + 20);
 
@@ -347,12 +354,13 @@ int main() {
                 int result = processIPPacket(buffer[i], 0, final_source_ip_port, final_dest_ip_port, int_NAT_table, ext_NAT_table, router_LanIp, router_WanIp, dynamic_port);
                 if (result < 0) {
                     // Drop the packet
+                    std::cout << "packet dropped" << std::endl;
                     memset(buffer[i], 0, 65535);
                     continue;
                 }
 
                 size_t pos = final_dest_ip_port.find(' ');
-                std::string final_dest_ip = szLine.substr(0, pos);
+                std::string final_dest_ip = final_dest_ip_port.substr(0, pos);
                 int dest_socket = connection_map[final_dest_ip];
                 write(dest_socket, buffer[i], payload_length + 20);
 
