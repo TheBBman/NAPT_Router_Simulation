@@ -386,8 +386,8 @@ int test(){
     string TTL = "00000010";
     string protocol = "00010001";
     string ip_checksum = "0000000000000000";
-    string source_ip = "01100100000000011010100011000000";
-    string dest_ip = "11001000000000011010100011000000";
+    string source_ip = "11000000101010000000000101100100";
+    string dest_ip = "11000000101010000000000111001000";
     string source_port = "0001001110001000";
     string dest_port = "0001011101110000";
     string useless = "0000000000000000";
@@ -405,7 +405,7 @@ int test(){
     const struct IP_header* test_ip =  (const struct IP_header*)buffer;
     uint16_t real_checksum_int = compute_IP_checksum_value(test_ip);
     cout<<"should be "<<real_checksum_int<<endl;
-    string real_checksum = "0100111100101011";
+    string real_checksum = "0101011000100100";
     string real_packet = header_length+version+ stuff+ total_length + more_stuff2+TTL+ protocol + real_checksum + source_ip+dest_ip+source_port+dest_port+useless+udp_checksum;
     const char* test_header2 = real_packet.c_str();
     char* buffer2 = (char*) malloc(len);

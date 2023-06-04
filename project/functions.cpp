@@ -114,12 +114,17 @@ uint16_t compute_TCP_checksum(const struct IP_header* ip, const struct TCP_heade
     
     // Add the checksum of the pseudo-header to the sum
     uint16_t pseudo_header[6];
-    pseudo_header[0] = ip->source_ip >> 16;
-    pseudo_header[1] = ip->source_ip & 0xFFFF;
-    pseudo_header[2] = ip->dest_ip >> 16;
-    pseudo_header[3] = ip->dest_ip & 0xFFFF;
+
+    uint32_t host_source_ip = ntohl(ip->source_ip);
+    uint32_t host_dest_ip = ntohl(ip->dest_ip);
+    pseudo_header[0] = host_source_ip >> 16;
+    pseudo_header[1] = host_source_ip & 0xFFFF;
+    pseudo_header[2] = host_dest_ip >> 16;
+    pseudo_header[3] = host_dest_ip & 0xFFFF;
     pseudo_header[4] = htons(ip->protocol);
     pseudo_header[5] = htons(sizeof(struct TCP_header) + payload_length);  // TCP length
+    //cout<<"source pseudo" << pseudo_header[0]<<" "<<pseudo_header[1]<<endl;
+    //cout<<"dest pseudo" << pseudo_header[2]<<" "<<pseudo_header[3]<<endl;
     sum += calculate_checksum(pseudo_header, 6);
 
     // Add carry bits to sum
@@ -144,13 +149,29 @@ uint16_t compute_UDP_checksum(const struct IP_header* ip, const struct UDP_heade
     
     //printf("initial sum is %u and %u\n", sum1, sum2);
     // Add the checksum of the pseudo-header to the sum
+    //cout<<"total ip struct source ip"<<ip->source_ip<<endl;
+    //cout<<"ntohl source ip"<< ntohl(ip->source_ip) <<endl;
     uint16_t pseudo_header[6];
-    pseudo_header[0] = ip->source_ip >> 16;
-    pseudo_header[1] = ip->source_ip & 0xFFFF;
-    pseudo_header[2] = ip->dest_ip >> 16;
-    pseudo_header[3] = ip->dest_ip & 0xFFFF;
+    /*
+        cout<<"starting"<<endl;
+    uint16_t first = ip->source_ip >> 16;
+    cout<< first <<endl;
+    uint16_t unval = ip->source_ip & 0xFFFF;
+    cout<< unval <<endl;
+    cout<< htons(ip->source_ip >> 16) <<endl;
+    uint16_t val = htons(ip->source_ip & 0xFFFF);
+    cout<< val <<endl;
+    */
+    uint32_t host_source_ip = ntohl(ip->source_ip);
+    uint32_t host_dest_ip = ntohl(ip->dest_ip);
+    pseudo_header[0] = host_source_ip >> 16;
+    pseudo_header[1] = host_source_ip & 0xFFFF;
+    pseudo_header[2] = host_dest_ip >> 16;
+    pseudo_header[3] = host_dest_ip & 0xFFFF;
     pseudo_header[4] = htons(ip->protocol);
     pseudo_header[5] = htons(sizeof(struct UDP_header) + payload_length);  // TCP length
+    //cout<<"source pseudo " << pseudo_header[0]<<" "<<pseudo_header[1]<<endl;
+    //cout<<"dest pseudo " << pseudo_header[2]<<" "<<pseudo_header[3]<<endl;
     sum += calculate_checksum(pseudo_header, 6);
     //printf("middle sum is %u\n", sum);
     // Add carry bits to sum
@@ -195,8 +216,8 @@ int processIPPacket(char* buffer, size_t length, string& final_source_ip_and_por
     uint8_t TTL = ip->TTL;
     struct in_addr source_ip;
     struct in_addr dest_ip;
-    source_ip.s_addr = ntohl(ip->source_ip);
-    dest_ip.s_addr = ntohl(ip->dest_ip);
+    source_ip.s_addr = ip->source_ip;
+    dest_ip.s_addr = ip->dest_ip;
     char source_ip_str[INET_ADDRSTRLEN];
     char dest_ip_str[INET_ADDRSTRLEN];
     strncpy(source_ip_str, inet_ntoa(source_ip), INET_ADDRSTRLEN);
@@ -204,7 +225,7 @@ int processIPPacket(char* buffer, size_t length, string& final_source_ip_and_por
 
     //test if its right:
     printf("IP packet: version = %u, header_length = %u, total_length = %u, protocol = %u, ip_checksum = %u, TTL= %u, source_ip=%u, dest_ip =%u\n",
-           version, header_length, total_length, protocol, ip_checksum, TTL, source_ip.s_addr, dest_ip.s_addr);
+           version, header_length, total_length, protocol, ip_checksum, TTL, ntohl(source_ip.s_addr), ntohl(dest_ip.s_addr));
     printf("source_ip = %s, dest_ip = %s\n", source_ip_str, dest_ip_str);
 
     //check IP TTL, drop if TTL=0 or 1
