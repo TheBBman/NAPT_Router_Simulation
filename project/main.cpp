@@ -249,7 +249,7 @@ int main() {
                 size_t pos = final_dest_ip_port.find(' ');
                 std::string final_dest_ip = szLine.substr(0, pos);
                 int dest_socket = connection_map[final_dest_ip];
-                write(dest_socket, buffer, payload_length + 20);
+                write(dest_socket, buffer[i], payload_length + 20);
 
                 // Reset buffer back to known state
                 memset(buffer[i], 0, 65535);
@@ -288,7 +288,7 @@ int main() {
                 size_t pos = final_dest_ip_port.find(' ');
                 std::string final_dest_ip = szLine.substr(0, pos);
                 int dest_socket = connection_map[final_dest_ip];
-                write(dest_socket, buffer, payload_length + 20);
+                write(dest_socket, buffer[i], payload_length + 20);
 
                 // Reset buffer back to known state
                 memset(buffer[i], 0, 65535);
