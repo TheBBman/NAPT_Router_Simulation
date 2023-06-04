@@ -205,9 +205,6 @@ int main() {
             //--------------------------------------------------------------------------------------//
             // Extract single, valid ip packet
 
-            // How many bytes into available socket stream has been read
-            int sd_read_head = 0;
-
             //-----------------------------------------------------------------//
             // Fragmentation cases, will only happen once per select() so just hard code
             // Honestly I'll deal with fragmentation later when it happens
@@ -316,8 +313,7 @@ int main() {
             // Could be multiple packets in stream
             while(1) {
                 // Read in next ip packet header
-                int bytes_read = read(sd, buffer[i] + sd_read_head, 20);
-                sd_read_head += bytes_read;
+                int bytes_read = read(sd, buffer[i], 20);
 
                 // This means test is over or all packets read
                 if (bytes_read == 0) {
@@ -325,10 +321,9 @@ int main() {
                     break;
                 }
 
-                std::cout << "read head: " << sd_read_head << std::endl;
-
                 // This means ip header fragmented 
                 if (bytes_read < 20) {
+                    std::cout << "fragment 1" << std::endl;
                     fragment[i] = 1;
                     bytes_fragmented[i] = 20 - bytes_read;
                     break;
@@ -339,11 +334,9 @@ int main() {
                 const struct IP_header* ip = (const struct IP_header*)buffer[i];
                 uint16_t payload_length = ntohs(ip->total_length) - 20;
                 
-                bytes_read = read(sd, buffer[i] + sd_read_head, payload_length);
-                sd_read_head += bytes_read;
+                bytes_read = read(sd, buffer[i] + 20, payload_length);
 
                 std::cout << "ip total length: " << ntohs(ip->total_length) << std::endl;
-                std::cout << "bytes_read2: " << bytes_read << std::endl;
 
                 // This means ip payload fragmented
                 if (bytes_read < payload_length) {
@@ -389,7 +382,6 @@ int main() {
                 write(dest_socket, buffer[i], payload_length + 20);
 
                 // Remember to copy and paste this code to the two fragmentation cases at the end too
-                // Reset buffer back to known state
             }
         }
     }
