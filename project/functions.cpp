@@ -84,7 +84,7 @@ uint16_t compute_IP_checksum_value(const struct IP_header* ip){
     for (int i = 0; i < ip_header_len_bytes / 2; i++) {
         
         sum += *ptr++;
-        cout<<i<<"th sum: "<<sum<<endl;
+        //cout<<i<<"th sum: "<<sum<<endl;
     }
 
     // Add carry bits to sum
@@ -100,10 +100,13 @@ uint16_t compute_IP_checksum_value(const struct IP_header* ip){
 uint32_t calculate_checksum(uint16_t* ptr, size_t length) {
     uint32_t sum = 0;
     for (size_t i = 0; i < length; i++) {
+        cout<<i<<"th sum "<< "field value: "<<*ptr<<endl;
         sum += *ptr++;
+        cout<<i<<"th sum: "<<sum<<endl;
     }
     while (sum >> 16) {
         sum = (sum & 0xFFFF) + (sum >> 16);
+        
     }
     return sum;
 }
@@ -111,11 +114,16 @@ uint32_t calculate_checksum(uint16_t* ptr, size_t length) {
 uint16_t compute_TCP_checksum(const struct IP_header* ip, const struct TCP_header* tcp, char* payload, size_t payload_length) {
     // Zero out the checksum field for calculation
     struct TCP_header tcp_copy = *tcp;
-    //uint16_t old_checksum = tcp->TCP_checksum;
+    uint16_t old_checksum = tcp_copy.TCP_checksum;
+    cout<<"network tcp "<<old_checksum<<endl;
+    cout<<"host tcp "<<ntohs(old_checksum)<<endl;
     tcp_copy.TCP_checksum = 0;
     // Calculate the checksum of the TCP header and payload
+    cout<< "TCP effective header length" << sizeof(struct TCP_header)/2 <<endl;
+    size_t payload_length_in_16 = (payload_length/2) + (payload_length%2);
+    cout<< "payload excluding headers length" <<payload_length/2 << endl;
     uint32_t sum = calculate_checksum((uint16_t*) &tcp_copy, sizeof(struct TCP_header) / 2) +
-                   calculate_checksum((uint16_t*)payload, payload_length / 2);
+                   calculate_checksum((uint16_t*)payload, payload_length_in_16);
     
     
     // Add the checksum of the pseudo-header to the sum
@@ -275,6 +283,7 @@ int processIPPacket(char* buffer, size_t length, string& final_source_ip_and_por
         //TCP checksum verification
         
         uint16_t transport_actual_checksum = compute_TCP_checksum(ip, tcp, buffer + header_len_bytes + transport_header_length, actual_payload_length);
+        cout<<"computed checksum is "<<transport_actual_checksum<<endl;
         if (transport_checksum != transport_actual_checksum){
             cout<<"TCP checksum failed"<<endl;
             return -1;
