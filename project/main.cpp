@@ -166,20 +166,18 @@ int main() {
         }
     }
 
+    // Also used for select
+    fd_set readfds;
+
     // Single ip packet maximum size, to be reused for processing
     // Will only ever hold at most one ip packet, one buffer for each socket
     char buffer[num_sockets][65535];
-
-    // Used to keep track of partial ip packets ^_^
-    //int fragment[num_sockets] = {0};
-    //int bytes_fragmented[num_sockets];
 
     // Used to keep track of dynamic NAT port allocation
     int dynamic_port = 49152;
 
     while (1) {
         // Zero out fd set and then add all connections into it
-        fd_set readfds;
         FD_ZERO(&readfds);
         for(int i = 0; i < num_sockets; i++) {
             int sd = client_sockets[i];
@@ -204,129 +202,16 @@ int main() {
             // end of select()
             //--------------------------------------------------------------------------------------//
             // Extract single, valid ip packet
-
-            //-----------------------------------------------------------------//
-            // Fragmentation cases, will only happen once per select() so just hard code
-            // Honestly I'll deal with fragmentation later when it happens
-
-            /*
-            // Fragmented header 
-            if (fragment[i] == 1) {    
-                int bytes = bytes_fragmented[i];
-
-                // Read in next ip packet header
-                int bytes_read = read(sd, buffer[i] + 20 - bytes, bytes);
-                sd_read_head += bytes_read;
-
-                // This means ip header fragmented, AGAIN
-                if (bytes_read < 20) {
-                    bytes_fragmented[i] = 20 - bytes - bytes_read;
-                    continue;
-                }
-                // Normal logic
-
-                // Find total length of ip packet
-                const struct IP_header* ip = (const struct IP_header*)buffer[i];
-                uint16_t payload_length = ntohs(ip->total_length) - 20;
-                
-                bytes_read = read(sd, buffer[i] + sd_read_head, payload_length);
-                
-                // This means ip payload fragmented (bruh)
-                if (bytes_read < payload_length) {
-                    fragment[i] = 2;
-                    bytes_fragmented[i] = payload_length - bytes_read;
-                    continue;
-                }
-
-                // Now buffer should contain a full ip packet
-
-                // ---> Randy doing his magic <--- //
-
-                std::string final_source_ip_port;
-                std::string final_dest_ip_port;
-                int result = processIPPacket(buffer[i], 0, final_source_ip_port, final_dest_ip_port, int_NAT_table, ext_NAT_table, router_LanIp, router_WanIp, dynamic_port);
-                if (result < 0) {
-                    // Drop the packet
-                    continue;
-                }
-
-                size_t pos = final_dest_ip_port.find(' ');
-                std::string final_dest_ip = final_dest_ip_port.substr(0, pos);
-                int dest_socket = connection_map[final_dest_ip];
-                write(dest_socket, buffer[i], payload_length + 20);
-
-                // Reset buffer back to known state
-                fragment[i] = 0;
-            }
-
-            // Fragmented payload 
-            else if (fragment[i] == 2) {
-                std::cout << "frag2 has been called" << std::endl;
-
-                const struct IP_header* ip = (const struct IP_header*)buffer[i];
-                uint16_t payload_length = ntohs(ip->total_length) - 20;
-
-                int buf_position = payload_length + 20 - bytes_fragmented[i];
-                
-                int bytes_read = read(sd, buffer[i] + buf_position, bytes_fragmented[i]);
-                
-                // This means ip payload fragmented, again
-                if (bytes_read < payload_length - bytes_fragmented[i]) {
-                    std::cout << "fragmented again?" << std::endl;
-                    bytes_fragmented[i] = payload_length - bytes_read;
-                    continue;
-                }
-
-                sd_read_head += bytes_read;
-
-                // Now buffer should contain a full ip packet
-
-                // ---> Randy doing his magic <--- //
-
-                std::string final_source_ip_port;
-                std::string final_dest_ip_port;
-                int result = processIPPacket(buffer[i], 0, final_source_ip_port, final_dest_ip_port, int_NAT_table, ext_NAT_table, router_LanIp, router_WanIp, dynamic_port);
-                if (result < 0) {
-                    // Drop the packet
-                    continue;
-                }
-
-                size_t pos = final_dest_ip_port.find(' ');
-                std::string final_dest_ip = final_dest_ip_port.substr(0, pos);
-                
-                int dest_socket;
-                auto it = connection_map.find(final_dest_ip);
-                if (it == connection_map.end()) {
-                    dest_socket = client_sockets[0];
-                } else {
-                    dest_socket = it->second;
-                }
-                write(dest_socket, buffer[i], payload_length + 20);
-
-                // Reset buffer back to known state
-                fragment[i] = 0;
-            }
-            */
-
-            //-----------------------------------------------------------------//
             
             // Could be multiple packets in stream
             // Read in next ip packet header
-            int bytes_read = read(sd, buffer[i], 20);
+            read(sd, buffer[i], 20);
 
             // Find total length of ip packet
             const struct IP_header* ip = (const struct IP_header*)buffer[i];
             uint16_t payload_length = ntohs(ip->total_length) - 20;
             
-            bytes_read = read(sd, buffer[i] + 20, payload_length);
-
-            // This means ip payload fragmented
-            if (bytes_read < payload_length) {
-                std::cout << "fragment case 2" << std::endl;
-                //fragment[i] = 2;
-                //bytes_fragmented[i] = payload_length - bytes_read;
-                break;
-            }
+            read(sd, buffer[i] + 20, payload_length);
 
             // Now buffer should contain a full ip packet
 

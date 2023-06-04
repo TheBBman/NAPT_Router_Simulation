@@ -135,8 +135,41 @@ python3 grader/packet_generate.py < scenarios/setting1.json
 
 ## TODO
 
-    ###########################################################
-    ##                                                       ##
-    ## REPLACE CONTENT OF THIS FILE WITH YOUR PROJECT REPORT ##
-    ##                                                       ##
-    ###########################################################
+Project Members:
+Justin Hu 205-514-102
+Randy Gu 305-592-076
+
+High level Design:
+
+We divided the project up into 2 main sections: Processing a single IP packet, and everything else. Justin worked in
+main.cpp doing connection and map setups, dealing with sockets and select(), and placing a whole IP packet into
+one continuous char buffer. Randy worked in functions.cpp doing packet processing logic such as checksum calculations,
+drop condition checks, and address rewrites. In main, the entire IP packet is processed in buffer with one call to the 
+IP processing function and then sent out to the listed destination or dropped.
+
+Major problems:
+
+We ran into two main problems, packets not being sent and checksum problems. Checksums are very annoying to deal with
+and issues were usually due to small details about the computation that we missed such as TCP padding. We also had
+a strange issue with packets not being sent out in time because the sockets were being closed, which seems to imply
+that our program was taking too long to run. Initially, we wrote the select() code as to be able to handle multiple
+IP packets at once as well as partial IP packets. In an act of desperation after hours of no progress, we deleted 
+everything but the most basic code to only handle single, whole IP packets and our code magically started to work. 
+We still have no explanation as to why this is the case, but we suspect that reading in 0 bytes from the socket was
+causing it to close prematurely, and so it turns out that the dumber, simpler way of assuming one packet per select 
+was the right way to go.
+
+References:
+
+In learning how to use select(), we heavily referenced TA Boyan Ding's example code at 
+https://github.com/dboyan/CS118-S23-1A/blob/main/Week%207/select.c as well as the Beej guide 
+https://beej.us/guide/bgnet/html/split/slightly-advanced-techniques.html#select
+
+Another student in discussion section 1D suggested the use of unordered maps to store address socket translations as 
+well as the NAT table, which we found to be a good solution.
+
+RFC 791 Internet Protocol
+RFC 768 User Datagram Protocol
+RFC 9293 Transmission Control Protocol 
+
+For details about headers and checksum computations.
