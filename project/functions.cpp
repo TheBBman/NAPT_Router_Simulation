@@ -24,6 +24,7 @@ struct IP_header{
     uint16_t ip_checksum; //11717
     uint32_t source_ip; //54917, 80518
     uint32_t dest_ip; //123718, 174919
+    uint8_t options[40];
 };
 #pragma pack()
 
@@ -78,12 +79,12 @@ uint16_t compute_IP_checksum_value(const struct IP_header* ip){
 
     // Sum all 16-bit words in the header
     uint16_t  ip_header_len_bytes = ip_copy.header_length * 4;
-    //cout<<"header len in 16 "<< ip_header_len_bytes/2<<endl;
+    cout<<"header len in 16 "<< ip_header_len_bytes/2<<endl;
     //cout<<"check "<<sizeof(struct IP_header) / 2<<endl;
     for (int i = 0; i < ip_header_len_bytes / 2; i++) {
         
         sum += *ptr++;
-        cout<<sum<<endl;
+        cout<<i<<"th sum: "<<sum<<endl;
     }
 
     // Add carry bits to sum

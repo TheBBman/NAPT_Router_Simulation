@@ -90,7 +90,7 @@ int main() {
         std::string ext_pair = router_WanIp + " " + wan_port;
 
         int_NAT_table[int_pair] = ext_pair;
-        ext_NAT_table[int_pair] = ext_pair;
+        ext_NAT_table[ext_pair] = int_pair;
     } 
 
     // Don't feel like implementing ACL for now and it's only 10 bonus
