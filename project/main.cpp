@@ -160,6 +160,12 @@ int main() {
 
     // Needed for select(), highest socket # in the list
     int max_sd = 0;
+    for(int i = 0; i < num_sockets; i++) {
+        int sd = client_sockets[i];
+        if (sd > max_sd) {
+            max_sd = sd;
+        }
+    }
 
     // Single ip packet maximum size, to be reused for processing
     // Will only ever hold at most one ip packet
@@ -178,9 +184,6 @@ int main() {
         for(int i = 0; i < num_sockets; i++) {
             int sd = client_sockets[i];
             FD_SET(sd, &readfds);
-            if (sd > max_sd) {
-                max_sd = sd;
-            }
         }
 
         // Only select sockets with something to read
@@ -193,14 +196,10 @@ int main() {
         for (int i = 0; i < num_sockets; i++) {
             int sd = client_sockets[i];
 
-            std::cout << sd << std::endl;
-
             // If socket was NOT selected, skip
             if (!FD_ISSET(sd, &readfds)) {
                 continue;
             }
-
-            std::cout << "selected" << std::endl;
 
             // end of select()
             //--------------------------------------------------------------------------------------//
@@ -211,7 +210,9 @@ int main() {
 
             //-----------------------------------------------------------------//
             // Fragmentation cases, will only happen once per select() so just hard code
+            // Honestly I'll deal with fragmentation later when it happens
 
+            /*
             // Fragmented header 
             if (fragment[i] == 1) {    
                 int bytes = bytes_fragmented[i];
@@ -249,7 +250,6 @@ int main() {
                 int result = processIPPacket(buffer[i], 0, final_source_ip_port, final_dest_ip_port, int_NAT_table, ext_NAT_table, router_LanIp, router_WanIp, dynamic_port);
                 if (result < 0) {
                     // Drop the packet
-                    memset(buffer[i], 0, 65535);
                     continue;
                 }
 
@@ -259,11 +259,13 @@ int main() {
                 write(dest_socket, buffer[i], payload_length + 20);
 
                 // Reset buffer back to known state
-                memset(buffer[i], 0, 65535);
                 fragment[i] = 0;
             }
+
             // Fragmented payload 
             else if (fragment[i] == 2) {
+                std::cout << "frag2 has been called" << std::endl;
+
                 const struct IP_header* ip = (const struct IP_header*)buffer[i];
                 uint16_t payload_length = ntohs(ip->total_length) - 20;
 
@@ -272,7 +274,8 @@ int main() {
                 int bytes_read = read(sd, buffer[i] + buf_position, bytes_fragmented[i]);
                 
                 // This means ip payload fragmented, again
-                if (bytes_read < payload_length) {
+                if (bytes_read < payload_length - bytes_fragmented[i]) {
+                    std::cout << "fragmented again?" << std::endl;
                     bytes_fragmented[i] = payload_length - bytes_read;
                     continue;
                 }
@@ -288,19 +291,25 @@ int main() {
                 int result = processIPPacket(buffer[i], 0, final_source_ip_port, final_dest_ip_port, int_NAT_table, ext_NAT_table, router_LanIp, router_WanIp, dynamic_port);
                 if (result < 0) {
                     // Drop the packet
-                    memset(buffer[i], 0, 65535);
                     continue;
                 }
 
                 size_t pos = final_dest_ip_port.find(' ');
                 std::string final_dest_ip = final_dest_ip_port.substr(0, pos);
-                int dest_socket = connection_map[final_dest_ip];
+                
+                int dest_socket;
+                auto it = connection_map.find(final_dest_ip);
+                if (it == connection_map.end()) {
+                    dest_socket = client_sockets[0];
+                } else {
+                    dest_socket = it->second;
+                }
                 write(dest_socket, buffer[i], payload_length + 20);
 
                 // Reset buffer back to known state
-                memset(buffer[i], 0, 65535);
                 fragment[i] = 0;
             }
+            */
 
             //-----------------------------------------------------------------//
 
@@ -312,10 +321,14 @@ int main() {
 
                 // This means test is over or all packets read
                 if (bytes_read == 0) {
+                    std::cout << "nothing read from socket " << sd << std::endl;
                     break;
                 }
+
+                std::cout << "read head: " << sd_read_head << std::endl;
+
                 // This means ip header fragmented 
-                else if (bytes_read < 20) {
+                if (bytes_read < 20) {
                     fragment[i] = 1;
                     bytes_fragmented[i] = 20 - bytes_read;
                     break;
@@ -327,9 +340,14 @@ int main() {
                 uint16_t payload_length = ntohs(ip->total_length) - 20;
                 
                 bytes_read = read(sd, buffer[i] + sd_read_head, payload_length);
-                
+                sd_read_head += bytes_read;
+
+                std::cout << "ip total length: " << ntohs(ip->total_length) << std::endl;
+                std::cout << "bytes_read2: " << bytes_read << std::endl;
+
                 // This means ip payload fragmented
                 if (bytes_read < payload_length) {
+                    std::cout << "fragment 2" << std::endl;
                     fragment[i] = 2;
                     bytes_fragmented[i] = payload_length - bytes_read;
                     break;
@@ -355,18 +373,23 @@ int main() {
                 if (result < 0) {
                     // Drop the packet
                     std::cout << "packet dropped" << std::endl;
-                    memset(buffer[i], 0, 65535);
                     continue;
                 }
 
                 size_t pos = final_dest_ip_port.find(' ');
                 std::string final_dest_ip = final_dest_ip_port.substr(0, pos);
-                int dest_socket = connection_map[final_dest_ip];
+
+                int dest_socket;
+                auto it = connection_map.find(final_dest_ip);
+                if (it == connection_map.end()) {
+                    dest_socket = client_sockets[0];
+                } else {
+                    dest_socket = it->second;
+                }
                 write(dest_socket, buffer[i], payload_length + 20);
 
                 // Remember to copy and paste this code to the two fragmentation cases at the end too
                 // Reset buffer back to known state
-                memset(buffer[i], 0, 65535);
             }
         }
     }
