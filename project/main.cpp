@@ -166,6 +166,9 @@ int main() {
     int fragment[num_sockets] = {0};
     int bytes_fragmented[num_sockets];
 
+    // Used to keep track of dynamic NAT port allocation
+    int dynamic_port = 49152;
+
     while (1) {
         // Zero out fd set and then add all connections into it
         FD_ZERO(&readfds);
@@ -233,6 +236,21 @@ int main() {
                 // Now buffer should contain a full ip packet
 
                 // ---> Randy doing his magic <--- //
+
+                std::string final_source_ip_port;
+                std::string final_dest_ip_port;
+                int result = processIPPacket(buffer[i], 0, final_source_ip_port, final_dest_ip_port, int_NAT_table, ext_NAT_table, router_LanIp, router_WanIp, dynamic_port);
+                if (result < 0) {
+                    // Drop the packet
+                    memset(buffer[i], 0, 65535);
+                    continue;
+                }
+
+                size_t pos = final_dest_ip_port.find(' ');
+                std::string final_dest_ip = szLine.substr(0, pos);
+                int dest_socket = connection_map[final_dest_ip];
+                write(dest_socket, buffer, payload_length + 20);
+
                 // Reset buffer back to known state
                 memset(buffer[i], 0, 65535);
                 fragment[i] = 0;
@@ -257,6 +275,20 @@ int main() {
                 // Now buffer should contain a full ip packet
 
                 // ---> Randy doing his magic <--- //
+
+                std::string final_source_ip_port;
+                std::string final_dest_ip_port;
+                int result = processIPPacket(buffer[i], 0, final_source_ip_port, final_dest_ip_port, int_NAT_table, ext_NAT_table, router_LanIp, router_WanIp, dynamic_port);
+                if (result < 0) {
+                    // Drop the packet
+                    memset(buffer[i], 0, 65535);
+                    continue;
+                }
+
+                size_t pos = final_dest_ip_port.find(' ');
+                std::string final_dest_ip = szLine.substr(0, pos);
+                int dest_socket = connection_map[final_dest_ip];
+                write(dest_socket, buffer, payload_length + 20);
 
                 // Reset buffer back to known state
                 memset(buffer[i], 0, 65535);
@@ -310,8 +342,21 @@ int main() {
                 // Static or Dynamic NAPT? if doing dynamic NAPT, add pairing to both NAPT maps
                 // Write to specified socket
 
-                // Remember to copy and paste this code to the two fragmentation cases at the end too
+                std::string final_source_ip_port;
+                std::string final_dest_ip_port;
+                int result = processIPPacket(buffer[i], 0, final_source_ip_port, final_dest_ip_port, int_NAT_table, ext_NAT_table, router_LanIp, router_WanIp, dynamic_port);
+                if (result < 0) {
+                    // Drop the packet
+                    memset(buffer[i], 0, 65535);
+                    continue;
+                }
 
+                size_t pos = final_dest_ip_port.find(' ');
+                std::string final_dest_ip = szLine.substr(0, pos);
+                int dest_socket = connection_map[final_dest_ip];
+                write(dest_socket, buffer, payload_length + 20);
+
+                // Remember to copy and paste this code to the two fragmentation cases at the end too
                 // Reset buffer back to known state
                 memset(buffer[i], 0, 65535);
             }
@@ -386,8 +431,8 @@ int test(){
     string TTL = "00000010";
     string protocol = "00010001";
     string ip_checksum = "0000000000000000";
-    string source_ip = "11000000101010000000000101100100";
-    string dest_ip = "11000000101010000000000111001000";
+    string source_ip = "01100100000000011010100011000000";
+    string dest_ip = "11001000000000011010100011000000";
     string source_port = "0001001110001000";
     string dest_port = "0001011101110000";
     string useless = "0000000000000000";
@@ -405,7 +450,7 @@ int test(){
     const struct IP_header* test_ip =  (const struct IP_header*)buffer;
     uint16_t real_checksum_int = compute_IP_checksum_value(test_ip);
     cout<<"should be "<<real_checksum_int<<endl;
-    string real_checksum = "0101011000100100";
+    string real_checksum = "0100111100101011";
     string real_packet = header_length+version+ stuff+ total_length + more_stuff2+TTL+ protocol + real_checksum + source_ip+dest_ip+source_port+dest_port+useless+udp_checksum;
     const char* test_header2 = real_packet.c_str();
     char* buffer2 = (char*) malloc(len);
