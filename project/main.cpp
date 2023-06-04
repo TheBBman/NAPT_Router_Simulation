@@ -345,11 +345,11 @@ int main() {
                 std::string final_source_ip_port;
                 std::string final_dest_ip_port;
                 int result = processIPPacket(buffer[i], 0, final_source_ip_port, final_dest_ip_port, int_NAT_table, ext_NAT_table, router_LanIp, router_WanIp, dynamic_port);
-                if (result < 0) {
-                    // Drop the packet
-                    memset(buffer[i], 0, 65535);
-                    continue;
-                }
+                // if (result < 0) {
+                //     // Drop the packet
+                //     memset(buffer[i], 0, 65535);
+                //     continue;
+                // }
 
                 size_t pos = final_dest_ip_port.find(' ');
                 std::string final_dest_ip = szLine.substr(0, pos);
