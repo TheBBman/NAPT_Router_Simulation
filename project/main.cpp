@@ -15,25 +15,6 @@
 #define DEFAULT_PORT 5152
 #define MAX_CLIENTS 10
 
-//already defined in functions file
-/*
-#pragma pack(1)
-struct IP_header{
-    uint8_t version :4;
-    uint8_t header_length :4;
-    uint8_t stuff;
-    uint16_t total_length;
-    uint32_t more_stuff;
-    uint8_t TTL;
-    uint8_t protocol;
-    uint16_t ip_checksum;
-    uint32_t source_ip;
-    uint32_t dest_ip;
-};
-#pragma pack()
-*/
-
-
 int main() {
     //--------------------------------------------------------------------------------------//
     // Reading in Config file:
@@ -203,7 +184,6 @@ int main() {
             //--------------------------------------------------------------------------------------//
             // Extract single, valid ip packet
             
-            // Could be multiple packets in stream
             // Read in next ip packet header
             read(sd, buffer[i], 20);
 
@@ -214,8 +194,6 @@ int main() {
             read(sd, buffer[i] + 20, payload_length);
 
             // Now buffer should contain a full ip packet
-
-            // ---> Randy doing his magic, process IP packet <--- //
 
             // What to return:
 
@@ -247,7 +225,6 @@ int main() {
                 dest_socket = it->second;
             }
             write(dest_socket, buffer[i], payload_length + 20);
-            // Remember to copy and paste this code to the two fragmentation cases at the end too
         }
     }
 }

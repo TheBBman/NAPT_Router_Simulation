@@ -1,31 +1,11 @@
-# CS118 Project 2
+# Computer Networks Project 2
 
-This is the repo for spring23 cs118 project 2.
-The Docker environment has the same setting with project 0.
-
-## Academic Integrity Note
-
-You are encouraged to host your code in private repositories on [GitHub](https://github.com/), [GitLab](https://gitlab.com), or other places.  At the same time, you are PROHIBITED to make your code for the class project public during the class or any time after the class.  If you do so, you will be violating academic honestly policy that you have signed, as well as the student code of conduct and be subject to serious sanctions.
-
-## Provided Files
+## Files
 
 - `project` is the folder to develop codes for future projects.
 - `grader` contains an autograder for you to test your program.
 - `scenarios` contains test cases and inputs to your program.
 - `docker-compose.yaml` and `Dockerfile` are files configuring the containers.
-
-## Docker bash commands
-
-```bash
-# Setup the container(s) (make setup)
-docker compose up -d
-
-# Bash into the container (make shell)
-docker compose exec node1 bash
-
-# Remove container(s) and the Docker image (make clean)
-docker compose down -v --rmi all --remove-orphans
-```
 
 ## Environment
 
@@ -34,7 +14,48 @@ docker compose down -v --rmi all --remove-orphans
 - Files in this repo are in the `/project` folder. That means, `server.cpp` is `/project/project/server.cpp` in the container.
   - When submission, `server.cpp` should be `project/server.cpp` in the `.zip` file.
 
-## Project 2 specific
+## Project 2 Report
+
+Project Members:
+Justin Hu 205-514-102
+Randy Gu 305-592-076
+
+High level Design:
+
+We divided the project up into 2 main sections: Processing a single IP packet, and everything else. Justin worked in
+main.cpp doing connection and map setups, dealing with sockets and select(), and placing a whole IP packet into
+one continuous char buffer. Randy worked in functions.cpp doing packet processing logic such as checksum calculations,
+drop condition checks, and address rewrites. In main, the entire IP packet is processed in buffer with one call to the 
+IP processing function and then sent out to the listed destination or dropped.
+
+Major problems:
+
+We ran into two main problems, packets not being sent and checksum problems. Checksums are very annoying to deal with
+and issues were usually due to small details about the computation that we missed such as TCP padding. We also had
+a strange issue with packets not being sent out in time because the sockets were being closed, which seems to imply
+that our program was taking too long to run. Initially, we wrote the select() code as to be able to handle multiple
+IP packets at once as well as partial IP packets. In an act of desperation after hours of no progress, we deleted 
+everything but the most basic code to only handle single, whole IP packets and our code magically started to work. 
+We still have no explanation as to why this is the case, but we suspect that reading in 0 bytes from the socket was
+causing it to close prematurely, and so it turns out that the dumber, simpler way of assuming one packet per select 
+was the right way to go. 
+
+References:
+
+In learning how to use select(), we heavily referenced TA Boyan Ding's example code at 
+https://github.com/dboyan/CS118-S23-1A/blob/main/Week%207/select.c as well as the Beej guide 
+https://beej.us/guide/bgnet/html/split/slightly-advanced-techniques.html#select
+
+Another student in discussion section 1D suggested the use of unordered maps to store address socket translations as 
+well as the NAT table, which we found to be a good solution.
+
+We referenced:
+
+RFC 791 Internet Protocol
+RFC 768 User Datagram Protocol
+RFC 9293 Transmission Control Protocol 
+
+For details about headers and checksum computations.
 
 ### How to use the test script
 
@@ -121,55 +142,3 @@ python3 grader/packet_generate.py < scenarios/setting1.json
 #
 # Check point 2
 #
-```
-
-### Other notes
-
-- We will use a different version of grader for the final test to integrate with Gradescope.
-  But it will be similar to the given one.
-  Modifying the grader in this repo will not affect anything.
-- We will include many hidden test cases in the final test. Do not fully depend on the 5 given ones.
-  They do not cover all edge cases that we want to test.
-- The autograder will only build your program in the `project` folder, and grade the built `server` executable.
-  Your program should not depend on other files to run.
-
-## TODO
-
-Project Members:
-Justin Hu 205-514-102
-Randy Gu 305-592-076
-
-High level Design:
-
-We divided the project up into 2 main sections: Processing a single IP packet, and everything else. Justin worked in
-main.cpp doing connection and map setups, dealing with sockets and select(), and placing a whole IP packet into
-one continuous char buffer. Randy worked in functions.cpp doing packet processing logic such as checksum calculations,
-drop condition checks, and address rewrites. In main, the entire IP packet is processed in buffer with one call to the 
-IP processing function and then sent out to the listed destination or dropped.
-
-Major problems:
-
-We ran into two main problems, packets not being sent and checksum problems. Checksums are very annoying to deal with
-and issues were usually due to small details about the computation that we missed such as TCP padding. We also had
-a strange issue with packets not being sent out in time because the sockets were being closed, which seems to imply
-that our program was taking too long to run. Initially, we wrote the select() code as to be able to handle multiple
-IP packets at once as well as partial IP packets. In an act of desperation after hours of no progress, we deleted 
-everything but the most basic code to only handle single, whole IP packets and our code magically started to work. 
-We still have no explanation as to why this is the case, but we suspect that reading in 0 bytes from the socket was
-causing it to close prematurely, and so it turns out that the dumber, simpler way of assuming one packet per select 
-was the right way to go.
-
-References:
-
-In learning how to use select(), we heavily referenced TA Boyan Ding's example code at 
-https://github.com/dboyan/CS118-S23-1A/blob/main/Week%207/select.c as well as the Beej guide 
-https://beej.us/guide/bgnet/html/split/slightly-advanced-techniques.html#select
-
-Another student in discussion section 1D suggested the use of unordered maps to store address socket translations as 
-well as the NAT table, which we found to be a good solution.
-
-RFC 791 Internet Protocol
-RFC 768 User Datagram Protocol
-RFC 9293 Transmission Control Protocol 
-
-For details about headers and checksum computations.
