@@ -17,7 +17,7 @@
 ## Project 2 Report
 
 Project Members:
-Justin Hu 205-514-102
+Justin Hu 205-514-102\
 Randy Gu 305-592-076
 
 High level Design:
@@ -51,8 +51,8 @@ well as the NAT table, which we found to be a good solution.
 
 We referenced:
 
-RFC 791 Internet Protocol
-RFC 768 User Datagram Protocol
+RFC 791 Internet Protocol\
+RFC 768 User Datagram Protocol\
 RFC 9293 Transmission Control Protocol 
 
 For details about headers and checksum computations.
