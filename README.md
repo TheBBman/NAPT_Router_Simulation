@@ -16,7 +16,7 @@
 
 ## Project 2 Report
 
-Project Members:
+Project Members:\
 Justin Hu 205-514-102\
 Randy Gu 305-592-076
 
